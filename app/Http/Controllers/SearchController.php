@@ -11,6 +11,7 @@ use App\Services\MovieService;
 use App\Services\PeopleService;
 use App\Services\SearchService;
 use App\Utils\HttpCode;
+use Illuminate\Support\Facades\Redis;
 
 class SearchController extends Controller
 {
@@ -32,6 +33,21 @@ class SearchController extends Controller
 
             $data = $request->validated();
             $searchType = SearchTypeEnum::from($data['type']);
+
+            Redis::incr("metrics:search:type:{$searchType->value}");
+
+            // Termos mais buscados por tipo
+            Redis::zincrby(
+                "metrics:search:terms:{$searchType->value}",
+                1,
+                strtolower($data['term'])
+            );
+
+            // Contador diário
+            $date = now()->format('Y-m-d');
+            Redis::incr("metrics:search:daily:{$date}");
+
+
             $response = $this->service->search($searchType, $data['term']);
             return $this->sendResponse($response, "List of {$data['type']} search with term {$data['term']}");
 
@@ -46,6 +62,16 @@ class SearchController extends Controller
         try {
 
             $searchType = SearchTypeEnum::from($type);
+
+
+            Redis::incr("metrics:search:type:{$searchType->value}");
+
+
+            // Contador diário
+            $date = now()->format('Y-m-d');
+            Redis::incr("metrics:search:daily:{$date}");
+
+
             $response = $this->service->details($searchType, $id);
             return $this->sendResponse($response, "List of {$type} search with term {$id}");
 

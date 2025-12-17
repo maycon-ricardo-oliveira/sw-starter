@@ -2,6 +2,7 @@
 
 
 use App\Http\Controllers\HealthController;
+use App\Http\Controllers\MetricsController;
 use App\Http\Controllers\SearchController;
 use Illuminate\Support\Facades\Route;
 
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\Route;
 // Health check (public)
 Route::get('health', [HealthController::class, 'check']);
 
+Route::get('/metrics', [MetricsController::class, 'index']);
 
 Route::get('/search/{type}', [SearchController::class, 'search']);
 Route::get('/details/{type}/{id}', [SearchController::class, 'details']);

@@ -68,6 +68,10 @@ RUN docker-php-ext-install \
     exif \
     pcntl
 
+RUN pecl install redis \
+    && docker-php-ext-enable redis
+
+
 # 6. Install Composer
 COPY --from=vendor-sw-starter-backend /usr/bin/composer /usr/bin/composer
 
