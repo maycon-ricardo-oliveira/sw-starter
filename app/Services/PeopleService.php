@@ -5,9 +5,10 @@ namespace App\Services;
 use App\Domain\PeopleDomain;
 use App\DTO\People\PeopleResponseDTO;
 use App\Repositories\Contracts\SearchRepositoryInterface;
+use App\Services\Contracts\SearchServiceInterface;
 use Illuminate\Support\Facades\Cache;
 
-class PeopleService
+class PeopleService implements SearchServiceInterface
 {
     private SearchRepositoryInterface $peopleRepo;
 
@@ -15,7 +16,26 @@ class PeopleService
         $this->peopleRepo = $peopleRepo;
     }
 
-    private const CACHE_TTL = 3600; // 1h
+    private const SEARCH_TTL = 600;   // 10 minutos
+    private const DETAIL_TTL = 3600;  // 1 hora
+
+    public function search($term): array
+    {
+
+        $cacheKey = "people:search:{$term}";
+
+        return Cache::remember(
+            $cacheKey,
+            self::SEARCH_TTL,
+            function () use ($term) {
+                $response = $this->peopleRepo->search($term);
+                return array_map(
+                    fn ($item) => $this->convertToDTO($item['properties']),
+                    $response
+                );
+            }
+        );
+    }
 
     public function details(string|int $id): PeopleResponseDTO
     {
@@ -23,7 +43,7 @@ class PeopleService
 
         return Cache::remember(
             $cacheKey,
-            self::CACHE_TTL,
+            self::DETAIL_TTL,
             function () use ($id) {
                 $data = $this->peopleRepo->find($id);
                 return $this->convertToDTO($data);

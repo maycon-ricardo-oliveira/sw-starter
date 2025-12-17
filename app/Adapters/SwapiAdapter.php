@@ -5,7 +5,6 @@ namespace App\Adapters;
 use App\Utils\HttpCode;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Client;
-use Symfony\Component\HttpFoundation\Response;
 
 
 class SwapiAdapter

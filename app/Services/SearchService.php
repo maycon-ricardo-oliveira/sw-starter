@@ -2,49 +2,40 @@
 
 namespace App\Services;
 
-use App\Domain\PeopleDomain;
-
-use App\DTO\People\PeopleResponseDTO;
-use App\Repositories\Contracts\SearchRepositoryInterface;
-use InvalidArgumentException;
+use App\Enums\SearchTypeEnum;
+use App\Exceptions\SearchException;
+use App\Services\Contracts\SearchServiceInterface;
 
 class SearchService
 {
-    private SearchRepositoryInterface $peopleRepo;
+    public function __construct(
+        private SearchServiceInterface $peopleService,
+        private SearchServiceInterface $movieService
+    ) {}
 
-    public function __construct(SearchRepositoryInterface $peopleRepo) {
-        $this->peopleRepo = $peopleRepo;
-    }
-
-    private function resolveRepository(string $type)
+    /**
+     * Search by term (people or movies)
+     * @throws SearchException
+     */
+    public function search(SearchTypeEnum $type, string $term): array
     {
         return match ($type) {
-            'people' => $this->peopleRepo,
-            'movies' => $this->peopleRepo,
-            default => throw new InvalidArgumentException('Invalid search type')
+            SearchTypeEnum::PEOPLE => $this->peopleService->search($term),
+            SearchTypeEnum::MOVIES => $this->movieService->search($term),
+            default => throw new SearchException('Invalid search type'),
         };
     }
 
-    public function search(string $type, $query): array
+    /**
+     * Find details by ID (people or movies)
+     * @throws SearchException
+     */
+    public function details(SearchTypeEnum $type, string $id)
     {
-        $response = $this->resolveRepository($type)->search($query);
-
-        return array_map(
-            fn ($item) => $this->convertToDTO($item['properties']),
-            $response
-        );
+        return match ($type) {
+            SearchTypeEnum::PEOPLE => $this->peopleService->details($id),
+            SearchTypeEnum::MOVIES => $this->movieService->details($id),
+            default => throw new SearchException('Invalid search type'),
+        };
     }
-
-
-
-    public function details(string $type, string $id): PeopleResponseDTO
-    {
-
-        $response = $this->resolveRepository($type)->find($id);
-
-        return $this->convertToDTO($response);
-    }
-
-
-
 }
