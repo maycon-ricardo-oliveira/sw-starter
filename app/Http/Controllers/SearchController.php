@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Adapters\SwapiAdapter;
 use App\Enums\SearchTypeEnum;
 use App\Http\Requests\SearchRequest;
+use App\Repositories\MovieRepository;
 use App\Repositories\PeopleRepository;
 use App\Services\MovieService;
 use App\Services\PeopleService;
@@ -13,13 +14,16 @@ use App\Utils\HttpCode;
 
 class SearchController extends Controller
 {
-    protected $service;
+    protected SearchService $service;
     private SwapiAdapter $apiAdapter;
 
     public function __construct()
     {
         $this->apiAdapter = new SwapiAdapter();
-        $this->service = new SearchService(new PeopleService(new PeopleRepository($this->apiAdapter)), new MovieService());
+        $this->service = new SearchService(
+            new PeopleService(new PeopleRepository($this->apiAdapter)),
+            new MovieService(new MovieRepository($this->apiAdapter))
+        );
     }
 
     public function search(SearchRequest $request)

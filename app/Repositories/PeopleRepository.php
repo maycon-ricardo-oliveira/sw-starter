@@ -15,7 +15,7 @@ class PeopleRepository implements SearchRepositoryInterface
 
     public function search(string $term): array
     {
-        return $this->adapter->search(self::RESOURCE, $term);
+        return $this->adapter->search(self::RESOURCE, ['name' => $term]);
     }
 
     public function find(string $id): array

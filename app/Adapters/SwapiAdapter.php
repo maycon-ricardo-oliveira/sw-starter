@@ -22,13 +22,11 @@ class SwapiAdapter
 
     }
 
-    public function search(string $resource, string $term): array
+    public function search(string $resource, array $term): array
     {
         try {
             $response = $this->client->get($resource, [
-                'query' => [
-                    'name' => $term
-                ],
+                'query' => $term,
                 'headers' => [
                     'Accept' => 'application/json'
                 ]
