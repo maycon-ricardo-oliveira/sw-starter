@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sw_starter_app
+    working_dir: /var/www/html
+    ports:
+      - "80:80"
+    volumes:
+      - .:/var/www/html
+    networks:
+      - sw_starter-network
+
+networks:
+  sw_starter-network:
+    driver: bridge
+
+
