@@ -13,7 +13,6 @@ class RecomputeMetricsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-
     public function handle(MetricsService $metricsService): void
     {
         $metricsService->recompute();

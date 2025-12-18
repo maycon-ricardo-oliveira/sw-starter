@@ -37,11 +37,6 @@ class MetricsService
         return json_decode($snapshot, true);
     }
 
-    /**
-     * =========================
-     * RECOMPUTE (COMMAND)
-     * =========================
-     */
     public function recompute(): array
     {
         $rawEvents = Redis::lrange('metrics:events', 0, -1);
@@ -64,12 +59,6 @@ class MetricsService
 
         return $metrics;
     }
-
-    /**
-     * =========================
-     * AUXILIARES
-     * =========================
-     */
 
     private function computeTotalSearchesByType(array $events): array
     {

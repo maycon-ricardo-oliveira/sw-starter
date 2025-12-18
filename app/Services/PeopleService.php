@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Domain\PeopleDomain;
 use App\DTO\People\PeopleResponseDTO;
-use App\Enums\SearchTypeEnum;
 use App\Repositories\Contracts\SearchRepositoryInterface;
 use App\Services\Contracts\SearchServiceInterface;
 use Illuminate\Support\Facades\Cache;
@@ -17,8 +16,8 @@ class PeopleService implements SearchServiceInterface
         $this->peopleRepo = $peopleRepo;
     }
 
-    private const SEARCH_TTL = 600;   // 10 minutos
-    private const DETAIL_TTL = 3600;  // 1 hora
+    private const SEARCH_TTL = 600;   // 10 minuts
+    private const DETAIL_TTL = 3600;  // 1 hour
 
     public function search($term): array
     {

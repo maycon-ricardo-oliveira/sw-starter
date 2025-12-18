@@ -17,7 +17,6 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Health check (public)
 Route::get('health', [HealthController::class, 'check']);
 
 Route::get('/metrics', [MetricsController::class, 'index']);
