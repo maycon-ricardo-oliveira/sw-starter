@@ -23,15 +23,21 @@ class SearchService
         $start = microtime(true);
         $result = match ($type) {
             SearchTypeEnum::PEOPLE => $this->peopleService->search($term),
-            SearchTypeEnum::MOVIES => $this->movieService->search($term),
+            SearchTypeEnum::MOVIE => $this->movieService->search($term),
             default => throw new SearchException('Invalid search type'),
         };
 
-        $this->metricsService->registerSearch($type->value, $term);
         $durationMs = (microtime(true) - $start) * 1000;
-        $this->metricsService->registerRequestTime($type->value, 'search', $durationMs);
-        return $result;
+        $this->metricsService->recordEvent(
+            event: 'search',
+            type: $type->value,
+            payload: [
+                'term' => $term,
+            ],
+            durationMs: $durationMs
+        );
 
+        return $result;
     }
 
     /**
@@ -43,13 +49,19 @@ class SearchService
         $start = microtime(true);
         $result = match ($type) {
             SearchTypeEnum::PEOPLE => $this->peopleService->details($id),
-            SearchTypeEnum::MOVIES => $this->movieService->details($id),
+            SearchTypeEnum::MOVIE => $this->movieService->details($id),
             default => throw new SearchException('Invalid search type'),
         };
 
         $durationMs = (microtime(true) - $start) * 1000;
-        $this->metricsService->registerDetails($type->value, $id);
-        $this->metricsService->registerRequestTime($type->value, 'search', $durationMs);
+        $this->metricsService->recordEvent(
+            event: 'details',
+            type: $type->value,
+            payload: [
+                'id' => $id,
+            ],
+            durationMs: $durationMs
+        );
         return $result;
     }
 }

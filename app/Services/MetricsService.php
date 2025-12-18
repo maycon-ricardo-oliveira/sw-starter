@@ -7,152 +7,176 @@ use Illuminate\Support\Facades\Redis;
 
 class MetricsService
 {
-    public function registerSearch(
+
+    public function recordEvent(
+        string $event,
         string $type,
-        string $term
+        array $payload = [],
+        ?float $durationMs = null
     ): void {
-        // =========================
-        // Total por tipo
-        // =========================
-        Redis::incr("metrics:search:type:{$type}");
-
-        // =========================
-        // Top termos
-        // =========================
-        Redis::zincrby(
-            "metrics:search:terms:{$type}",
-            1,
-            strtolower($term)
-        );
-
-        // =========================
-        // Buscas por dia
-        // =========================
-        $today = now()->format('Y-m-d');
-        Redis::incr("metrics:search:daily:{$today}");
-
-        // =========================
-        // Últimas buscas
-        // =========================
-        Redis::lpush(
-            'metrics:search:last',
-            json_encode([
-                'type' => $type,
-                'term' => $term,
-                'at'   => now()->toISOString(),
-            ])
-        );
-
-        // mantém só as 10 últimas
-        Redis::ltrim('metrics:search:last', 0, 9);
+        Redis::rpush('metrics:events', json_encode([
+            'event'       => $event,           // search | details | etc
+            'type'        => $type,            // people | movie
+            'payload'     => $payload,         // term, id, endpoint...
+            'duration_ms' => $durationMs ? round($durationMs, 2) : null,
+            'created_at'  => now()->toIso8601String(),
+        ]));
     }
 
     public function getMetrics(): array
     {
-        $today = now()->format('Y-m-d');
+        $snapshot = Redis::get('metrics:snapshot');
 
-        return [
-            'totalSearchesByType' => $this->getTotalByType(),
-            'topTerms'            => $this->getTopTerms(),
-            'dailySearches'       => $this->getDailySearches($today),
-            'lastSearches'        => $this->getLastSearches(),
-            'averageRequestTime' => $this->getAverageRequestTime(),
-        ];
-    }
-    
-    public function registerDetails(string $type, string $id): void
-    {
-        Redis::incr("metrics:details:type:{$type}");
-
-        Redis::zincrby(
-            "metrics:details:entity:{$type}",
-            1,
-            $id
-        );
-
-        $hour = now()->format('H');
-        Redis::incr("metrics:details:hourly:{$hour}");
-    }
-
-    public function registerRequestTime($type, $endpoint, $durationMs)
-    {
-        Redis::lpush('metrics:request:times', json_encode([
-            'type' => $type,
-            'endpoint' => $endpoint,
-            'duration' => (int) $durationMs,
-            'timestamp' => now()->toISOString(),
-        ]));
-    }
-
-
-
-    private function getTotalByType(): array
-    {
-        return [
-            'people' => (int) Redis::get('metrics:search:type:people'),
-            'movie'  => (int) Redis::get('metrics:search:type:movies'),
-        ];
-    }
-
-    private function getTopTerms(): array
-    {
-        return [
-            'people' => $this->formatTerms(
-                Redis::zrevrange(
-                    'metrics:search:terms:people',
-                    0,
-                    4,
-                    ['withscores' => true]
-                )
-            ),
-            'movie' => $this->formatTerms(
-                Redis::zrevrange(
-                    'metrics:search:terms:movies',
-                    0,
-                    4,
-                    ['withscores' => true]
-                )
-            ),
-        ];
-    }
-
-    private function getDailySearches(string $date): array
-    {
-        return [
-            $date => (int) Redis::get("metrics:search:daily:{$date}")
-        ];
-    }
-
-    private function getLastSearches(): array
-    {
-        $items = Redis::lrange('metrics:search:last', 0, 9);
-
-        return array_map(
-            fn ($item) => json_decode($item, true),
-            $items
-        );
-    }
-
-    private function formatTerms(array $terms): array
-    {
-        $formatted = [];
-
-        foreach ($terms as $term => $count) {
-            $formatted[] = [
-                'term'  => $term,
-                'count' => (int) $count,
+        if (!$snapshot) {
+            return [
+                'message' => 'Metrics not computed yet',
+                'data' => [],
             ];
         }
 
-        return $formatted;
+        return json_decode($snapshot, true);
     }
-    private function getAverageRequestTime(): array
-    {
-        $avg = Redis::get('metrics:request:avg');
 
-        return $avg
-            ? json_decode($avg, true)
-            : ['average_ms' => 0];
+    /**
+     * =========================
+     * RECOMPUTE (COMMAND)
+     * =========================
+     */
+    public function recompute(): array
+    {
+        $rawEvents = Redis::lrange('metrics:events', 0, -1);
+        $events = array_map(fn ($e) => json_decode($e, true), $rawEvents);
+
+        if (empty($events)) {
+            return [];
+        }
+
+        $metrics = [
+            'totalSearchesByType' => $this->computeTotalSearchesByType($events),
+            'topTerms'            => $this->computeTopTerms($events),
+            'dailySearches'       => $this->computeDailySearches($events),
+            'lastSearches'        => $this->computeLastSearches($events),
+            'averageRequestTimeMs'=> $this->computeAverageRequestTime($events),
+            'updatedAt'           => now()->toIso8601String(),
+        ];
+
+        Redis::set('metrics:snapshot', json_encode($metrics));
+
+        return $metrics;
+    }
+
+    /**
+     * =========================
+     * AUXILIARES
+     * =========================
+     */
+
+    private function computeTotalSearchesByType(array $events): array
+    {
+        $result = ['people' => 0, 'movie' => 0];
+
+        foreach ($events as $event) {
+            if ($event['event'] === 'search') {
+                $result[$event['type']]++;
+            }
+        }
+
+        return $result;
+    }
+
+    private function computeTopTerms(array $events): array
+    {
+        $terms = [
+            'people' => [],
+            'movie'  => [],
+        ];
+
+        foreach ($events as $event) {
+            if ($event['event'] !== 'search') {
+                continue;
+            }
+
+            $term = strtolower($event['payload']['term'] ?? '');
+
+            if (!$term) {
+                continue;
+            }
+
+            $terms[$event['type']][$term] =
+                ($terms[$event['type']][$term] ?? 0) + 1;
+        }
+
+        return [
+            'people' => $this->formatTopTerms($terms['people']),
+            'movie'  => $this->formatTopTerms($terms['movie']),
+        ];
+    }
+
+    private function formatTopTerms(array $terms): array
+    {
+        arsort($terms);
+        $top = array_slice($terms, 0, 5, true);
+        $total = array_sum($top);
+
+        return array_map(
+            fn ($count, $term) => [
+                'term'       => $term,
+                'count'      => $count,
+                'percentage' => $total > 0
+                    ? round(($count / $total) * 100, 2)
+                    : 0,
+            ],
+            $top,
+            array_keys($top)
+        );
+    }
+
+    private function computeDailySearches(array $events): array
+    {
+        $daily = [];
+
+        foreach ($events as $event) {
+            if ($event['event'] !== 'search') {
+                continue;
+            }
+
+            $day = substr($event['created_at'], 0, 10);
+            $daily[$day] = ($daily[$day] ?? 0) + 1;
+        }
+
+        return $daily;
+    }
+
+    private function computeLastSearches(array $events): array
+    {
+        $searches = array_values(
+            array_filter($events, fn ($e) => $e['event'] === 'search')
+        );
+
+        $last = array_slice($searches, -10);
+
+        return array_map(fn ($e) => [
+            'type' => $e['type'],
+            'term' => $e['payload']['term'] ?? null,
+            'at'   => $e['created_at'],
+        ], array_reverse($last));
+    }
+
+    private function computeAverageRequestTime(array $events): float
+    {
+        $durations = [];
+
+        foreach ($events as $event) {
+            if (!empty($event['duration_ms'])) {
+                $durations[] = $event['duration_ms'];
+            }
+        }
+
+        if (empty($durations)) {
+            return 0;
+        }
+
+        return round(array_sum($durations) / count($durations), 2);
     }
 
 }

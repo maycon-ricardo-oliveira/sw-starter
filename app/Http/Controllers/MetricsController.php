@@ -6,7 +6,6 @@ use App\Services\MetricsService;
 
 class MetricsController extends Controller
 {
-
     public function __construct(
         private MetricsService $metricsService
     ) { }
@@ -17,5 +16,4 @@ class MetricsController extends Controller
             $this->metricsService->getMetrics()
         );
     }
-
 }

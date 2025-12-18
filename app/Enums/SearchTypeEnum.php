@@ -5,7 +5,7 @@ namespace App\Enums;
 enum SearchTypeEnum: string
 {
     case PEOPLE = 'people';
-    case MOVIES = 'movies';
+    case MOVIE = 'movie';
 
     /**
      * Retorna todos os valores do enum (útil para validação)

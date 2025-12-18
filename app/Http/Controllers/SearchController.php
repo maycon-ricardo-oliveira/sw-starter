@@ -12,7 +12,6 @@ use App\Services\MovieService;
 use App\Services\PeopleService;
 use App\Services\SearchService;
 use App\Utils\HttpCode;
-use Illuminate\Support\Facades\Redis;
 
 class SearchController extends Controller
 {
