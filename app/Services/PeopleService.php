@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Domain\PeopleDomain;
 use App\DTO\People\PeopleResponseDTO;
+use App\Enums\SearchTypeEnum;
 use App\Repositories\Contracts\SearchRepositoryInterface;
 use App\Services\Contracts\SearchServiceInterface;
 use Illuminate\Support\Facades\Cache;

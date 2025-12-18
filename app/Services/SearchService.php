@@ -10,7 +10,8 @@ class SearchService
 {
     public function __construct(
         private SearchServiceInterface $peopleService,
-        private SearchServiceInterface $movieService
+        private SearchServiceInterface $movieService,
+        private MetricsService $metricsService
     ) {}
 
     /**
@@ -19,11 +20,18 @@ class SearchService
      */
     public function search(SearchTypeEnum $type, string $term): array
     {
-        return match ($type) {
+        $start = microtime(true);
+        $result = match ($type) {
             SearchTypeEnum::PEOPLE => $this->peopleService->search($term),
             SearchTypeEnum::MOVIES => $this->movieService->search($term),
             default => throw new SearchException('Invalid search type'),
         };
+
+        $this->metricsService->registerSearch($type->value, $term);
+        $durationMs = (microtime(true) - $start) * 1000;
+        $this->metricsService->registerRequestTime($type->value, 'search', $durationMs);
+        return $result;
+
     }
 
     /**
@@ -32,10 +40,16 @@ class SearchService
      */
     public function details(SearchTypeEnum $type, string $id)
     {
-        return match ($type) {
+        $start = microtime(true);
+        $result = match ($type) {
             SearchTypeEnum::PEOPLE => $this->peopleService->details($id),
             SearchTypeEnum::MOVIES => $this->movieService->details($id),
             default => throw new SearchException('Invalid search type'),
         };
+
+        $durationMs = (microtime(true) - $start) * 1000;
+        $this->metricsService->registerDetails($type->value, $id);
+        $this->metricsService->registerRequestTime($type->value, 'search', $durationMs);
+        return $result;
     }
 }
