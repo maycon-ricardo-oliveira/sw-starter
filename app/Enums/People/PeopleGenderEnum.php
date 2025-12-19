@@ -8,6 +8,7 @@ enum PeopleGenderEnum: string
     case FEMALE = 'female';
     case NA = 'n/a';
     case UNKNOWN = 'unknown';
+    case HERMAPHRODITE = 'hermaphrodite';
 
     public static function values(): array
     {

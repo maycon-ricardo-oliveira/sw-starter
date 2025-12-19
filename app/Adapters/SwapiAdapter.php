@@ -66,7 +66,7 @@ class SwapiAdapter
                 throw new \RuntimeException('Resource not found');
             }
 
-            return $data['result']['properties'];
+            return $data['result'];
 
         } catch (GuzzleException $exception) {
             throw new \Exception(
