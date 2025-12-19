@@ -14,6 +14,7 @@ class PeopleResponseDTO implements JsonSerializable
     public function jsonSerialize(): mixed
     {
         return [
+            'id' => $this->people->getId(),
             'name' => $this->people->getName(),
             'gender' => $this->people->getGender(),
             'skinColor' => $this->people->getSkinColor(),
@@ -23,7 +24,7 @@ class PeopleResponseDTO implements JsonSerializable
             'mass' => $this->people->getMass(),
             'birthYear' => $this->people->getBirthYear(),
             'homeworld' => $this->people->getHomeworld(),
-            'films' => $this->people->getFilms(),
+            'movies' => $this->people->getMovies(),
             'vehicles' => $this->people->getVehicles(),
             'starships' => $this->people->getStarships(),
             'createdAt' => $this->people->getCreatedAt(),

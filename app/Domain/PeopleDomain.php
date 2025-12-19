@@ -7,6 +7,7 @@ use App\Exceptions\PeopleException;
 
 class PeopleDomain
 {
+    private string $id;
     private string $name;
     private string $gender;
     private string $skinColor;
@@ -16,7 +17,7 @@ class PeopleDomain
     private ?string $mass;
     private ?string $birthYear;
     private string $homeworld;
-    private array $films;
+    private array $movies;
     private array $vehicles;
     private array $starships;
     private string $createdAt;
@@ -24,6 +25,7 @@ class PeopleDomain
     private string $url;
 
     public function __construct(
+        string $id,
         string $name,
         string $gender,
         string $skinColor,
@@ -33,13 +35,14 @@ class PeopleDomain
         ?string $mass,
         ?string $birthYear,
         string $homeworld,
-        array $films,
+        array $movies,
         array $vehicles,
         array $starships,
         string $createdAt,
         string $updatedAt,
         string $url
     ) {
+        $this->id = $id;
         $this->name = $name;
         $this->gender = $gender;
         $this->skinColor = $skinColor;
@@ -49,7 +52,7 @@ class PeopleDomain
         $this->mass = $mass;
         $this->birthYear = $birthYear;
         $this->homeworld = $homeworld;
-        $this->films = $films;
+        $this->movies = $movies;
         $this->vehicles = $vehicles;
         $this->starships = $starships;
         $this->createdAt = $createdAt;
@@ -64,7 +67,7 @@ class PeopleDomain
     | Getters
     |--------------------------------------------------------------------------
     */
-
+    public function getId(): string { return $this->id; }
     public function getName(): string { return $this->name; }
     public function getGender(): string { return $this->gender; }
     public function getSkinColor(): string { return $this->skinColor; }
@@ -74,7 +77,7 @@ class PeopleDomain
     public function getMass(): ?string { return $this->mass; }
     public function getBirthYear(): ?string { return $this->birthYear; }
     public function getHomeworld(): string { return $this->homeworld; }
-    public function getFilms(): array { return $this->films; }
+    public function getMovies(): array { return $this->movies; }
     public function getVehicles(): array { return $this->vehicles; }
     public function getStarships(): array { return $this->starships; }
     public function getCreatedAt(): string { return $this->createdAt; }
@@ -112,9 +115,9 @@ class PeopleDomain
         }
     }
 
-    public function hasFilms(): bool
+    public function hasMovies(): bool
     {
-        return !empty($this->films);
+        return !empty($this->movies);
     }
 
     public function hasVehicles(): bool

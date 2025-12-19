@@ -30,7 +30,7 @@ class PeopleService implements SearchServiceInterface
             function () use ($term) {
                 $response = $this->peopleRepo->search($term);
                 return array_map(
-                    fn ($item) => $this->convertToDTO($item['properties']),
+                    fn ($item) => $this->convertToDTO($item),
                     $response
                 );
             }
@@ -57,9 +57,11 @@ class PeopleService implements SearchServiceInterface
         return new PeopleResponseDTO($peopleDomain);
     }
 
-    protected function convertRecordToDomain($properties): PeopleDomain
+    protected function convertRecordToDomain($people): PeopleDomain
     {
+        $properties = $people['properties'];
         return new PeopleDomain(
+            id: $people['uid'],
             name: $properties['name'],
             gender: $properties['gender'] ?? 'unknown',
             skinColor: $properties['skin_color'] ?? '',
@@ -69,7 +71,7 @@ class PeopleService implements SearchServiceInterface
             mass: $properties['mass'] ?? null,
             birthYear: $properties['birth_year'] ?? null,
             homeworld: $properties['homeworld'],
-            films: $properties['films'] ?? [],
+            movies: $properties['films'] ?? [],
             vehicles: $properties['vehicles'] ?? [],
             starships: $properties['starships'] ?? [],
             createdAt: $properties['created'],
