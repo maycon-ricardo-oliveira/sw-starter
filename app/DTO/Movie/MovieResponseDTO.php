@@ -14,6 +14,7 @@ class MovieResponseDTO implements JsonSerializable
     public function jsonSerialize(): mixed
     {
         return [
+            'id' => $this->movie->getId(),
             'title' => $this->movie->getTitle(),
             'episodeId' => $this->movie->getEpisodeId(),
             'director' => $this->movie->getDirector(),

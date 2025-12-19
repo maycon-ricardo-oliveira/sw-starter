@@ -4,6 +4,7 @@ namespace App\Domain;
 
 class MovieDomain
 {
+    private string $id;
     private string $title;
     private int $episodeId;
     private string $director;
@@ -22,6 +23,7 @@ class MovieDomain
     private string $url;
 
     public function __construct(
+        string $id,
         string $title,
         int $episodeId,
         string $director,
@@ -37,6 +39,7 @@ class MovieDomain
         string $updatedAt,
         string $url
     ) {
+        $this->id = $id;
         $this->title = $title;
         $this->episodeId = $episodeId;
         $this->director = $director;
@@ -55,6 +58,7 @@ class MovieDomain
 
     // Getters
 
+    public function getId() { return $this->id; }
     public function getTitle(): string { return $this->title; }
     public function getEpisodeId(): int { return $this->episodeId; }
     public function getDirector(): string { return $this->director; }

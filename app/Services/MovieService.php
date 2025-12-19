@@ -31,7 +31,7 @@ class MovieService implements SearchServiceInterface
                 $response = $this->movieRepo->search($term);
 
                 return array_map(
-                    fn ($item) => $this->convertToDTO($item['properties']),
+                    fn ($item) => $this->convertToDTO($item),
                     $response ?? []
                 );
             }
@@ -59,9 +59,11 @@ class MovieService implements SearchServiceInterface
         return new MovieResponseDTO($movieDomain);
     }
 
-    protected function convertRecordToDomain($properties): MovieDomain
+    protected function convertRecordToDomain($movie): MovieDomain
     {
+        $properties = $movie['properties'];
         return new MovieDomain(
+            $movie['uid'],
             title: $properties['title'],
             episodeId: (int) $properties['episode_id'],
             director: $properties['director'],
