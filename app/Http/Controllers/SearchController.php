@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Adapters\SwapiAdapter;
 use App\Enums\SearchTypeEnum;
+use App\Http\Requests\DetailsRequest;
 use App\Http\Requests\SearchRequest;
 use App\Repositories\MovieRepository;
 use App\Repositories\PeopleRepository;
@@ -38,22 +39,26 @@ class SearchController extends Controller
             $response = $this->service->search($searchType, $data['term']);
             return $this->sendResponse($response, "List of {$data['type']} search with term {$data['term']}");
 
-        }catch (\Exception $e){
+        } catch (\Exception $e) {
             return $this->sendResponse([], $e->getMessage(), HttpCode::BAD_REQUEST);
         }
 
     }
 
-    public function details(string $type, string $id)
+    public function details(DetailsRequest $request)
     {
         try {
 
-            $searchType = SearchTypeEnum::from($type);
+            $data = $request->validated();
+            $searchType = SearchTypeEnum::from($data['type']);
+            $response = $this->service->details($searchType, $data['id']);
 
-            $response = $this->service->details($searchType, $id);
-            return $this->sendResponse($response, "List of {$type} search with term {$id}");
+            return $this->sendResponse(
+                $response,
+                "Details of {$data['type']} with id {$data['id']}"
+            );
 
-        }catch (\Exception $e){
+        } catch (\Exception $e) {
             return $this->sendResponse([], $e->getMessage(), HttpCode::BAD_REQUEST);
         }
     }
