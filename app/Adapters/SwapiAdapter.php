@@ -19,7 +19,6 @@ class SwapiAdapter
 
     public function __construct(?Client $client = null)
     {
-        // If a client is injected (tests), do not override configuration
         if ($client) {
             $this->client = $client;
             return;
@@ -54,11 +53,8 @@ class SwapiAdapter
 
             return $this->handleResponse($response);
 
-        } catch (GuzzleException $e) {
-            throw new \RuntimeException(
-                'Failed to communicate with SWAPI (search)',
-                previous: $e
-            );
+        } catch (GuzzleException $exception) {
+            throw new \RuntimeException('Failed to communicate with SWAPI (search)', $exception);
         }
     }
 
@@ -69,20 +65,15 @@ class SwapiAdapter
 
             return $this->handleResponse($response, single: true);
 
-        } catch (GuzzleException $e) {
-            throw new \RuntimeException(
-                'Failed to communicate with SWAPI (find)',
-                previous: $e
-            );
+        } catch (GuzzleException $exception) {
+            throw new \RuntimeException('Failed to communicate with SWAPI (find)', $exception);
         }
     }
 
     private function handleResponse(ResponseInterface $response, bool $single = false): array
     {
         if ($response->getStatusCode() !== HttpCode::SUCCESS) {
-            throw new \RuntimeException(
-                'SWAPI returned error status: ' . $response->getStatusCode()
-            );
+            throw new \RuntimeException('SWAPI returned error status: ' . $response->getStatusCode());
         }
 
         $data = json_decode(
@@ -121,12 +112,11 @@ class SwapiAdapter
                 return true;
             }
 
-            if ($response && $response->getStatusCode() >= 500) {
+            if ($response && $response->getStatusCode() >= HttpCode::SERVER_ERROR) {
                 return true;
             }
 
-            // Optional: rate limit
-            if ($response && $response->getStatusCode() === 429) {
+            if ($response && $response->getStatusCode() === HttpCode::RATE_LIMIT) {
                 return true;
             }
 
