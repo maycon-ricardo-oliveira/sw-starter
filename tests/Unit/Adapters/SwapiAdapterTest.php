@@ -3,10 +3,12 @@
 namespace Tests\Unit\Adapters;
 
 use App\Adapters\SwapiAdapter;
+use App\Utils\HttpCode;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
 use Tests\TestCase;
 use GuzzleHttp\Psr7\Request;
@@ -99,6 +101,65 @@ class SwapiAdapterTest extends TestCase
         $adapter = new SwapiAdapter($client);
 
         $this->expectException(\RuntimeException::class);
+
+        $adapter->search('people', ['name' => 'luke']);
+    }
+
+    public function test_search_retries_on_500_and_succeeds(): void
+    {
+        $mock = new MockHandler([
+            new Response(500),
+            new Response(
+                HttpCode::SUCCESS,
+                [],
+                json_encode([
+                    'result' => [
+                        ['name' => 'Luke Skywalker'],
+                    ],
+                ])
+            ),
+        ]);
+
+        $stack = HandlerStack::create($mock);
+        $stack->push(
+            Middleware::retry(
+                fn ($retries, $request, $response = null) =>
+                    $retries < 3 && $response && $response->getStatusCode() >= 500,
+                fn () => 0
+            )
+        );
+
+        $client = new Client([
+            'handler' => $stack,
+            'http_errors' => false,
+        ]);
+
+        $adapter = new SwapiAdapter($client);
+
+        $result = $adapter->search('people', ['name' => 'luke']);
+
+        $this->assertCount(1, $result);
+        $this->assertEquals('Luke Skywalker', $result[0]['name']);
+    }
+
+    public function test_search_throws_exception_on_timeout(): void
+    {
+        $mock = new MockHandler([
+            new \GuzzleHttp\Exception\ConnectException(
+                'Connection timed out',
+                new \GuzzleHttp\Psr7\Request('GET', 'people')
+            ),
+        ]);
+
+        $client = new Client([
+            'handler' => HandlerStack::create($mock),
+            'http_errors' => false,
+        ]);
+
+        $adapter = new SwapiAdapter($client);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Failed to communicate with SWAPI');
 
         $adapter->search('people', ['name' => 'luke']);
     }
