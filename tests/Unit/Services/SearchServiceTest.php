@@ -18,7 +18,17 @@ class SearchServiceTest extends TestCase
     {
         $peopleService = Mockery::mock(PeopleService::class);
         $movieService = Mockery::mock(MovieService::class);
-        $metricService = Mockery::mock(MetricsService::class);
+        $metricsService = Mockery::mock(MetricsService::class);
+
+        $metricsService->shouldReceive('recordEvent')
+            ->once()
+            ->withArgs(function ($event, $type, $payload, $durationMs) {
+                return $event === 'search'
+                    && $type === 'people'
+                    && $payload['term'] === 'luke'
+                    && is_float($durationMs);
+            });
+
 
         $peopleService
             ->shouldReceive('search')
@@ -26,7 +36,7 @@ class SearchServiceTest extends TestCase
             ->with('luke')
             ->andReturn([]);
 
-        $service = new SearchService($peopleService, $movieService, $metricService);
+        $service = new SearchService($peopleService, $movieService, $metricsService);
 
         $service->search(SearchTypeEnum::PEOPLE, 'luke');
     }
@@ -35,7 +45,16 @@ class SearchServiceTest extends TestCase
     {
         $peopleService = Mockery::mock(PeopleService::class);
         $movieService = Mockery::mock(MovieService::class);
-        $metricService = Mockery::mock(MetricsService::class);
+        $metricsService = Mockery::mock(MetricsService::class);
+
+        $metricsService->shouldReceive('recordEvent')
+            ->once()
+            ->withArgs(function ($event, $type, $payload, $durationMs) {
+                return $event === 'search'
+                    && $type === 'movie'
+                    && $payload['term'] === 'hope'
+                    && is_float($durationMs);
+            });
 
         $movieService
             ->shouldReceive('search')
@@ -43,7 +62,7 @@ class SearchServiceTest extends TestCase
             ->with('hope')
             ->andReturn([]);
 
-        $service = new SearchService($peopleService, $movieService, $metricService);
+        $service = new SearchService($peopleService, $movieService, $metricsService);
 
         $service->search(SearchTypeEnum::MOVIE, 'hope');
     }
