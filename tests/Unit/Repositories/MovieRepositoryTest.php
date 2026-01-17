@@ -3,9 +3,7 @@
 namespace Tests\Unit\Repositories;
 
 use App\Adapters\SwapiAdapter;
-use App\Repositories\Contracts\SearchRepositoryInterface;
 use App\Repositories\MovieRepository;
-use App\Services\MovieService;
 use Mockery;
 use Tests\TestCase;
 
@@ -31,7 +29,17 @@ class MovieRepositoryTest extends TestCase
             [
                 'uid' => '1',
                 'properties' => [
-                    'title' => 'A New Hope'
+                    'title' => 'A New Hope',
+                    'episode_id' => 4,
+                    'director' => 'George Lucas',
+                    'producer' => 'Gary Kurtz',
+                    'release_date' => '1977-05-25',
+                    'opening_crawl' => '...',
+                    'characters' => [],
+                    'planets' => [],
+                    'starships' => [],
+                    'vehicles' => [],
+                    'species' => [],
                 ]
             ]
         ];
@@ -40,24 +48,7 @@ class MovieRepositoryTest extends TestCase
             ->shouldReceive('search')
             ->once()
             ->with('films', ['title' => 'hope'])
-            ->andReturn([
-                [
-                    'uid' => '1',
-                    'properties' => [
-                        'title' => 'A New Hope',
-                        'episode_id' => 4,
-                        'director' => 'George Lucas',
-                        'producer' => 'Gary Kurtz',
-                        'release_date' => '1977-05-25',
-                        'opening_crawl' => '...',
-                        'characters' => [],
-                        'planets' => [],
-                        'starships' => [],
-                        'vehicles' => [],
-                        'species' => [],
-                    ],
-                ]
-            ]);
+            ->andReturn($apiResponse);
 
         $result = $this->repository->search($term);
 

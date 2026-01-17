@@ -54,7 +54,10 @@ class SwapiAdapter
             return $this->handleResponse($response);
 
         } catch (GuzzleException $exception) {
-            throw new \RuntimeException('Failed to communicate with SWAPI (search)', $exception);
+            throw new \RuntimeException(
+                'Failed to communicate with SWAPI (search)',
+                previous: $exception
+            );
         }
     }
 
@@ -66,14 +69,19 @@ class SwapiAdapter
             return $this->handleResponse($response, single: true);
 
         } catch (GuzzleException $exception) {
-            throw new \RuntimeException('Failed to communicate with SWAPI (find)', $exception);
+            throw new \RuntimeException(
+                'Failed to communicate with SWAPI (find)',
+                previous: $exception
+            );
         }
     }
 
     private function handleResponse(ResponseInterface $response, bool $single = false): array
     {
         if ($response->getStatusCode() !== HttpCode::SUCCESS) {
-            throw new \RuntimeException('SWAPI returned error status: ' . $response->getStatusCode());
+            throw new \RuntimeException(
+                'SWAPI returned error status: ' . $response->getStatusCode()
+            );
         }
 
         $data = json_decode(
@@ -85,7 +93,7 @@ class SwapiAdapter
             throw new \RuntimeException('Invalid JSON returned by SWAPI');
         }
 
-        if (!isset($data['result'])) {
+        if (!isset($data['result']) && !isset($data['results'])) {
             throw new \RuntimeException('Invalid SWAPI response format');
         }
 
@@ -93,7 +101,7 @@ class SwapiAdapter
             throw new \RuntimeException('Resource not found');
         }
 
-        return $data['result'];
+        return $data['result'] ?? $data['results'];
     }
 
     private function retryDecider(): callable

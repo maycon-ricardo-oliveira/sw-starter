@@ -3,9 +3,8 @@
 
 use Illuminate\Support\Facades\Schedule;
 
-
 Schedule::command('metrics:recompute')
-    ->everyFifteenSeconds()
+    ->everyFifteenMinutes()
     ->onOneServer();
 
 

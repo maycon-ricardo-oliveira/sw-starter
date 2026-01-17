@@ -2,8 +2,8 @@
 
 namespace Tests\Unit\Services;
 
-use App\Adapters\SwapiAdapter;
 use App\Repositories\Contracts\SearchRepositoryInterface;
+use App\Repositories\RedisCacheRepository;
 use App\Services\MovieService;
 use Mockery;
 use Tests\TestCase;
@@ -12,10 +12,10 @@ class MovieServiceTest extends TestCase
 {
 
 
-
     public function test_movie_service_calls_repository_and_returns_dto()
     {
         $repo = Mockery::mock(SearchRepositoryInterface::class);
+        $cache = Mockery::mock(RedisCacheRepository::class);
 
         $repo->shouldReceive('search')
             ->once()
@@ -37,7 +37,7 @@ class MovieServiceTest extends TestCase
                 ]
             ]);
 
-        $service = new MovieService($repo);
+        $service = new MovieService($repo, $cache);
 
         $result = $service->search('hope');
 

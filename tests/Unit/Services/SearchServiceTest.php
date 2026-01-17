@@ -67,6 +67,4 @@ class SearchServiceTest extends TestCase
         $service->search(SearchTypeEnum::MOVIE, 'hope');
     }
 
-
-
 }

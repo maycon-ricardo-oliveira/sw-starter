@@ -4,6 +4,7 @@ namespace Tests\Unit\Services;
 
 use App\Adapters\SwapiAdapter;
 use App\Repositories\Contracts\SearchRepositoryInterface;
+use App\Repositories\RedisCacheRepository;
 use App\Services\PeopleService;
 use Illuminate\Support\Facades\Cache;
 use Mockery;
@@ -14,13 +15,14 @@ class PeopleServiceTest extends TestCase
 
     public function test_people_service_calls_repository_and_returns_dto()
     {
-        Cache::shouldReceive('remember')
+        $repo = Mockery::mock(SearchRepositoryInterface::class);
+        $cache = Mockery::mock(RedisCacheRepository::class);
+
+        $cache->shouldReceive('remember')
             ->once()
             ->andReturnUsing(function ($key, $ttl, $callback) {
                 return $callback();
             });
-
-        $repo = Mockery::mock(SearchRepositoryInterface::class);
 
         $repo->shouldReceive('search')
             ->once()
@@ -41,7 +43,7 @@ class PeopleServiceTest extends TestCase
                 ]
             ]);
 
-        $service = new PeopleService($repo);
+        $service = new PeopleService($repo, $cache);
 
         $result = $service->search('luke');
 

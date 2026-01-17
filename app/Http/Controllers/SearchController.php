@@ -8,11 +8,13 @@ use App\Http\Requests\DetailsRequest;
 use App\Http\Requests\SearchRequest;
 use App\Repositories\MovieRepository;
 use App\Repositories\PeopleRepository;
+use App\Repositories\RedisCacheRepository;
 use App\Services\MetricsService;
 use App\Services\MovieService;
 use App\Services\PeopleService;
 use App\Services\SearchService;
 use App\Utils\HttpCode;
+use Illuminate\Http\JsonResponse;
 
 class SearchController extends Controller
 {
@@ -23,8 +25,8 @@ class SearchController extends Controller
     {
         $this->apiAdapter = new SwapiAdapter();
         $this->service = new SearchService(
-            new PeopleService(new PeopleRepository($this->apiAdapter)),
-            new MovieService(new MovieRepository($this->apiAdapter)),
+            new PeopleService(new PeopleRepository($this->apiAdapter), new RedisCacheRepository()),
+            new MovieService(new MovieRepository($this->apiAdapter),  new RedisCacheRepository()),
             new MetricsService()
         );
     }
@@ -45,7 +47,7 @@ class SearchController extends Controller
 
     }
 
-    public function details(DetailsRequest $request)
+    public function details(DetailsRequest $request): JsonResponse
     {
         try {
 

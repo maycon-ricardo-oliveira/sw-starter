@@ -3,16 +3,22 @@
 namespace App\Services;
 
 use App\Domain\PeopleDomain;
+use App\DTO\Movie\MovieLightDTO;
 use App\DTO\People\PeopleResponseDTO;
+use App\Repositories\Contracts\CacheRepositoryInterface;
 use App\Repositories\Contracts\SearchRepositoryInterface;
 use App\Services\Contracts\SearchServiceInterface;
-use Illuminate\Support\Facades\Cache;
 
-class PeopleService implements SearchServiceInterface
+class PeopleService extends BaseService implements SearchServiceInterface
 {
     private SearchRepositoryInterface $peopleRepo;
+    private CacheRepositoryInterface $cache;
 
-    public function __construct(SearchRepositoryInterface $peopleRepo) {
+    public function __construct(
+        SearchRepositoryInterface $peopleRepo,
+        CacheRepositoryInterface $cache
+    ) {
+        $this->cache = $cache;
         $this->peopleRepo = $peopleRepo;
     }
 
@@ -24,14 +30,16 @@ class PeopleService implements SearchServiceInterface
 
         $cacheKey = "people:search:{$term}";
 
-        return Cache::remember(
+        return $this->cache->remember(
             $cacheKey,
             self::SEARCH_TTL,
             function () use ($term) {
                 $response = $this->peopleRepo->search($term);
                 return array_map(
-                    fn ($item) => $this->convertToDTO($item),
-                    $response
+                    function ($data) {
+                        $domain = $this->convertRecordToDomain($data);
+                        return $this->convertToDTO($domain);
+                    }, $response
                 );
             }
         );
@@ -39,25 +47,28 @@ class PeopleService implements SearchServiceInterface
 
     public function details(string|int $id): PeopleResponseDTO
     {
-        $cacheKey = "people:details:{$id}";
+        $this->cache->flush();
 
-        return Cache::remember(
+        $cacheKey = "people:detail:{$id}";
+
+        $data = $this->cache->remember(
             $cacheKey,
             self::DETAIL_TTL,
-            function () use ($id) {
-                $data = $this->peopleRepo->find($id);
-                return $this->convertToDTO($data);
-            }
+            fn () => $this->peopleRepo->find($id)
         );
+
+        $movies = $this->getMoviesByIds($data);
+
+        $domain = $this->convertRecordToDomain($data, $movies);
+        return $this->convertToDTO($domain);
     }
 
-    protected function convertToDTO($people): PeopleResponseDTO
+    protected function convertToDTO(PeopleDomain $people): PeopleResponseDTO
     {
-        $peopleDomain = $this->convertRecordToDomain($people);
-        return new PeopleResponseDTO($peopleDomain);
+        return new PeopleResponseDTO($people);
     }
 
-    protected function convertRecordToDomain($people): PeopleDomain
+    protected function convertRecordToDomain($people, $related = null): PeopleDomain
     {
         $properties = $people['properties'];
         return new PeopleDomain(
@@ -71,7 +82,7 @@ class PeopleService implements SearchServiceInterface
             mass: $properties['mass'] ?? null,
             birthYear: $properties['birth_year'] ?? null,
             homeworld: $properties['homeworld'],
-            movies: $properties['films'] ?? [],
+            movies: $related ?? [],
             vehicles: $properties['vehicles'] ?? [],
             starships: $properties['starships'] ?? [],
             createdAt: $properties['created'],
@@ -79,4 +90,23 @@ class PeopleService implements SearchServiceInterface
             url: $properties['url']
         );
     }
+
+    private function getMoviesByIds($data): array
+    {
+
+        $movieUrls = $data['properties']['films'] ?? [];
+        $movieIds  = $this->extractIds($movieUrls);
+
+        if (empty($movieIds)) {
+            return [];
+        }
+
+        $response = $this->peopleRepo->findRelated($movieIds);
+
+        return array_map(
+            fn ($movie) => MovieLightDTO::make($movie)->toArray(),
+            $response
+        );
+    }
+
 }

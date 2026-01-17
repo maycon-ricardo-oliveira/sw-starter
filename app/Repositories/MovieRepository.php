@@ -9,6 +9,7 @@ class MovieRepository implements SearchRepositoryInterface
 {
 
     const RESOURCE = 'films';
+    const PEOPLE_RESOURCE = 'people';
 
     public function __construct(private SwapiAdapter $adapter) { }
 
@@ -20,5 +21,17 @@ class MovieRepository implements SearchRepositoryInterface
     public function find(string $id): array
     {
         return $this->adapter->find(self::RESOURCE, $id);
+    }
+
+    public function findRelated(array $ids): array
+    {
+        if (empty($ids)) {
+            return [];
+        }
+
+        return $this->adapter->search(
+            self::PEOPLE_RESOURCE,
+            ['ids' => implode(',', $ids)]
+        );
     }
 }

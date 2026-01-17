@@ -7,4 +7,5 @@ interface SearchRepositoryInterface
     public function search(string $term);
 
     public function find(string $id): array;
+    public function findRelated(array $ids): array;
 }
