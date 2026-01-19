@@ -3,7 +3,6 @@
 namespace Tests\Unit\Services;
 
 use App\Enums\SearchTypeEnum;
-use App\Repositories\Contracts\SearchRepositoryInterface;
 use App\Services\MetricsService;
 use App\Services\MovieService;
 use App\Services\PeopleService;

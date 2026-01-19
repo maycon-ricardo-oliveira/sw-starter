@@ -7,7 +7,6 @@ enum SearchTypeEnum: string
     case PEOPLE = 'people';
     case MOVIE = 'movie';
 
-
     public static function values(): array
     {
         return array_column(self::cases(), 'value');

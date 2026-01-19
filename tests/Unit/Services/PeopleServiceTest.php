@@ -2,11 +2,9 @@
 
 namespace Tests\Unit\Services;
 
-use App\Adapters\SwapiAdapter;
 use App\Repositories\Contracts\SearchRepositoryInterface;
 use App\Repositories\RedisCacheRepository;
 use App\Services\PeopleService;
-use Illuminate\Support\Facades\Cache;
 use Mockery;
 use Tests\TestCase;
 
