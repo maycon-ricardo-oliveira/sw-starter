@@ -15,7 +15,7 @@ class PeopleLightDTO
     {
         return new self(
             id: $item['uid'],
-            name: $item    ['name'],
+            name: $item['name'],
             url: "/details/people/{$item['uid']}",
         );
     }
