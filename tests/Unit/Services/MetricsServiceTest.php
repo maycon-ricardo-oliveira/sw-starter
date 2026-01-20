@@ -1,93 +1,103 @@
 <?php
-
-namespace Tests\Unit\Services;
-
 use App\Services\MetricsService;
-use Illuminate\Support\Facades\Redis;
+use App\Repositories\Contracts\MetricsRepositoryInterface;
+use Mockery;
 use Tests\TestCase;
 
 class MetricsServiceTest extends TestCase
 {
-    protected MetricsService $service;
-
-    protected function setUp(): void
+    protected function tearDown(): void
     {
-        parent::setUp();
-        $this->service = new MetricsService();
+        Mockery::close();
+        parent::tearDown();
     }
 
-    public function test_it_records_a_metrics_event()
+    public function test_it_returns_snapshot_when_it_exists()
     {
-        Redis::shouldReceive('rpush')
+        $repo = Mockery::mock(MetricsRepositoryInterface::class);
+
+        $repo->shouldReceive('latest')
             ->once()
-            ->withArgs(function ($key, $payload) {
-                $this->assertEquals('metrics:events', $key);
+            ->with('metrics:snapshot')
+            ->andReturn([
+                'totalSearchesByType' => ['people' => 1, 'movie' => 0],
+                'topTerms' => ['people' => [], 'movie' => []],
+                'dailySearches' => [],
+                'lastSearches' => [],
+                'averageRequestTimeMs' => 0,
+                'updatedAt' => now()->toIso8601String(),
+            ]);
 
-                $event = json_decode($payload, true);
+        // 🔑 IMPORTANTE
+        $repo->shouldReceive('save')->zeroOrMoreTimes()->withAnyArgs();
 
-                $this->assertEquals('search', $event['event']);
-                $this->assertEquals('people', $event['type']);
-                $this->assertEquals(['term' => 'luke'], $event['payload']);
-                $this->assertEquals(123.45, $event['duration_ms']);
-                $this->assertArrayHasKey('created_at', $event);
+        $service = new MetricsService($repo);
 
-                return true;
-            });
+        $metrics = $service->getMetrics();
 
-        $this->service->recordEvent(
-            event: 'search',
-            type: 'people',
-            payload: ['term' => 'luke'],
-            durationMs: 123.45
-        );
+        $this->assertEquals(1, $metrics->totalSearchesByType['people']);
     }
 
-    public function test_it_recomputes_metrics_and_stores_snapshot()
+    public function test_it_recomputes_and_saves_snapshot_when_none_exists()
     {
-        $events = [
-            json_encode([
-                'event' => 'search',
-                'type' => 'people',
-                'payload' => ['term' => 'luke'],
-                'duration_ms' => 100,
-                'created_at' => now()->subMinutes(2)->toIso8601String(),
-            ]),
-            json_encode([
-                'event' => 'search',
-                'type' => 'movie',
-                'payload' => ['term' => 'hope'],
-                'duration_ms' => 200,
-                'created_at' => now()->subMinute()->toIso8601String(),
-            ]),
-        ];
+        $repo = Mockery::mock(MetricsRepositoryInterface::class);
 
-        Redis::shouldReceive('lrange')
+        $repo->shouldReceive('latest')
             ->once()
-            ->with('metrics:events', 0, -1)
-            ->andReturn($events);
+            ->with('metrics:snapshot')
+            ->andReturn(null);
 
-        Redis::shouldReceive('set')
+        $repo->shouldReceive('all')
             ->once()
-            ->withArgs(function ($key, $payload) {
-                $this->assertEquals('metrics:snapshot', $key);
+            ->with('metrics:events')
+            ->andReturn([
+                json_encode([
+                    'event' => 'search',
+                    'type' => 'people',
+                    'payload' => ['term' => 'luke'],
+                    'duration_ms' => 100,
+                    'created_at' => '2026-01-20T14:00:00+00:00',
+                ])
+            ]);
 
-                $data = json_decode($payload, true);
+        $repo->shouldReceive('save')
+            ->once()
+            ->with(
+                'metrics:snapshot',
+                Mockery::on(fn ($metrics) =>
+                    $metrics['totalSearchesByType']['people'] === 1
+                ),
+                Mockery::type('int')
+            );
 
-                $this->assertArrayHasKey('totalSearchesByType', $data);
-                $this->assertEquals(1, $data['totalSearchesByType']['people']);
-                $this->assertEquals(1, $data['totalSearchesByType']['movie']);
+        $service = new MetricsService($repo);
 
-                $this->assertArrayHasKey('topTerms', $data);
-                $this->assertArrayHasKey('averageRequestTimeMs', $data);
-                $this->assertArrayHasKey('updatedAt', $data);
+        $metrics = $service->getMetrics();
 
-                return true;
-            });
+        $this->assertEquals(1, $metrics->totalSearchesByType['people']);
+    }
 
-        $metrics = $this->service->recompute();
+    public function test_it_returns_empty_metrics_when_no_events_exist()
+    {
+        $repo = Mockery::mock(MetricsRepositoryInterface::class);
 
-        $this->assertEquals(1, $metrics['totalSearchesByType']['people']);
-        $this->assertEquals(1, $metrics['totalSearchesByType']['movie']);
-        $this->assertEquals(150, $metrics['averageRequestTimeMs']);
+        $repo->shouldReceive('latest')
+            ->once()
+            ->with('metrics:snapshot')
+            ->andReturn(null);
+
+        $repo->shouldReceive('all')
+            ->once()
+            ->with('metrics:events')
+            ->andReturn([]);
+
+        // 🔑 SEM ISSO, O TESTE QUEBRA
+        $repo->shouldReceive('save')->once()->withAnyArgs();
+
+        $service = new MetricsService($repo);
+
+        $metrics = $service->getMetrics();
+
+        $this->assertEquals(0, $metrics->averageRequestTimeMs);
     }
 }

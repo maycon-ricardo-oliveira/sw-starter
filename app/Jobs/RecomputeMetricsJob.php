@@ -2,19 +2,19 @@
 
 namespace App\Jobs;
 
-use App\Services\MetricsService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Artisan;
 
 class RecomputeMetricsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function handle(MetricsService $metricsService): void
+    public function handle(): void
     {
-        $metricsService->recompute();
+        Artisan::call('metrics:recompute');
     }
 }

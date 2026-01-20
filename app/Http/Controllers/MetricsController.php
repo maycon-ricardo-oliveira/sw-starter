@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Repositories\RedisCacheRepository;
 use App\Services\MetricsService;
 
 class MetricsController extends Controller
 {
-    public function __construct(
-        private MetricsService $metricsService
-    ) { }
+    private MetricsService $metricsService;
+
+    public function __construct() {
+        $this->metricsService = new MetricsService(new RedisCacheRepository());
+    }
 
     public function index()
     {

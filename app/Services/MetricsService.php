@@ -3,10 +3,35 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Redis;
+use App\DTO\Metrics\MetricsResponseDTO;
+use App\Repositories\Contracts\MetricsRepositoryInterface;
 
 class MetricsService
 {
+    private const EVENTS_KEY   = 'metrics:events';
+    private const SNAPSHOT_KEY = 'metrics:snapshot';
+    private const SNAPSHOT_TTL = 3600;
+
+    public function __construct(
+        private MetricsRepositoryInterface $snapshot
+    ) {}
+
+    public function getMetrics(): MetricsResponseDTO
+    {
+        $snapshot = $this->snapshot->latest(self::SNAPSHOT_KEY);
+
+        if ($snapshot) {
+            return MetricsResponseDTO::fromSnapshot($snapshot);
+        }
+
+        $computed = $this->recompute();
+
+        if ($computed) {
+            return MetricsResponseDTO::fromSnapshot($computed);
+        }
+
+        return MetricsResponseDTO::empty();
+    }
 
     public function recordEvent(
         string $event,
@@ -14,37 +39,28 @@ class MetricsService
         array $payload = [],
         ?float $durationMs = null
     ): void {
-        Redis::rpush('metrics:events', json_encode([
-            'event'       => $event,           // search | details | etc
-            'type'        => $type,            // people | movie
-            'payload'     => $payload,         // term, id, endpoint...
+        $this->snapshot->append(self::EVENTS_KEY, [
+            'event'       => $event,
+            'type'        => $type,
+            'payload'     => $payload,
             'duration_ms' => $durationMs ? round($durationMs, 2) : null,
             'created_at'  => now()->toIso8601String(),
-        ]));
-    }
-
-    public function getMetrics(): array
-    {
-        $snapshot = Redis::get('metrics:snapshot');
-
-        if (!$snapshot) {
-            return [
-                'message' => 'Metrics not computed yet',
-                'data' => [],
-            ];
-        }
-
-        return json_decode($snapshot, true);
+        ]);
     }
 
     public function recompute(): array
     {
-        $rawEvents = Redis::lrange('metrics:events', 0, -1);
-        $events = array_map(fn ($e) => json_decode($e, true), $rawEvents);
+        $rawEvents = $this->snapshot->all(self::EVENTS_KEY);
 
-        if (empty($events)) {
-            return [];
-        }
+        $events = array_values(array_filter(
+            array_map(function ($event) {
+                if (is_string($event)) {
+                    return json_decode($event, true);
+                }
+
+                return $event;
+            }, $rawEvents)
+        ));
 
         $metrics = [
             'totalSearchesByType' => $this->computeTotalSearchesByType($events),
@@ -55,7 +71,7 @@ class MetricsService
             'updatedAt'           => now()->toIso8601String(),
         ];
 
-        Redis::set('metrics:snapshot', json_encode($metrics));
+        $this->snapshot->save(self::SNAPSHOT_KEY, $metrics, self::SNAPSHOT_TTL);
 
         return $metrics;
     }
@@ -65,8 +81,13 @@ class MetricsService
         $result = ['people' => 0, 'movie' => 0];
 
         foreach ($events as $event) {
-            if ($event['event'] === 'search') {
-                $result[$event['type']]++;
+
+            if (($event['event'] ?? null) === 'search') {
+                $type = $event['type'] ?? null;
+
+                if (isset($result[$type])) {
+                    $result[$type]++;
+                }
             }
         }
 

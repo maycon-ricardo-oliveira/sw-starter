@@ -24,10 +24,11 @@ class SearchController extends Controller
     public function __construct()
     {
         $this->apiAdapter = new SwapiAdapter();
+        $cache = new RedisCacheRepository();
         $this->service = new SearchService(
-            new PeopleService(new PeopleRepository($this->apiAdapter), new RedisCacheRepository()),
-            new MovieService(new MovieRepository($this->apiAdapter),  new RedisCacheRepository()),
-            new MetricsService()
+            new PeopleService(new PeopleRepository($this->apiAdapter), $cache),
+            new MovieService(new MovieRepository($this->apiAdapter),  $cache),
+            new MetricsService($cache)
         );
     }
 

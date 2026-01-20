@@ -47,7 +47,6 @@ class PeopleService extends BaseService implements SearchServiceInterface
 
     public function details(string|int $id): PeopleResponseDTO
     {
-        $this->cache->flush();
 
         $cacheKey = "people:detail:{$id}";
 

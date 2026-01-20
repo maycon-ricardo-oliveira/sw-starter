@@ -2,18 +2,37 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\RecomputeMetricsJob;
+use App\Repositories\RedisCacheRepository;
+use App\Services\MetricsService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Redis;
 
 class RecomputeMetricsCommand extends Command
 {
-    protected $signature = 'metrics:recompute';
-    protected $description = 'Dispatch metrics recompute job';
+    private MetricsService $metricsService;
 
-    public function handle(): void
+    public function __construct()
     {
-        RecomputeMetricsJob::dispatch()->onQueue('metrics');
+        parent::__construct();
+        $this->metricsService = new MetricsService(new RedisCacheRepository());
+    }
 
-        $this->info('Metrics recompute job dispatched.');
+    protected $signature = 'metrics:recompute';
+
+    protected $description = 'Recompute metrics snapshot from stored events';
+
+    public function handle(): int
+    {
+
+        $this->info('Recomputing metrics...');
+
+        $raw = Redis::lrange('metrics:snapshot', 0, -1);
+
+
+        $this->metricsService->recompute();
+
+        $this->info('Metrics recomputed successfully.');
+
+        return Command::SUCCESS;
     }
 }
